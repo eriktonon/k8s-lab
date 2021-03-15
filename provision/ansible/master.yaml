@@ -34,9 +34,9 @@
         path: /etc/hosts
         line: "{{ item }}"
       with_items:
-        - 192.168.99.102 master.labk8s.corp.br
-        - 192.168.99.103 node1.labk8s.corp.br
-        - 192.168.99.104 node2.labk8s.corp.br
+        - 192.168.99.100 master.labk8s.corp.br
+        - 192.168.99.101 node1.labk8s.corp.br
+        - 192.168.99.102 node2.labk8s.corp.br
     
     - name: Instalando pacotes de dependencias
       apt:
