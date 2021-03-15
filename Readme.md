@@ -13,6 +13,6 @@
   ```bash
   $ git clone https://github.com/eriktonon/k8s-lab.git
   $ cd k8s-lab
-  $ sudo chmod +x startLab.sh
+  $ chmod +x startLab.sh
   $ bash startLab.sh
   ```
