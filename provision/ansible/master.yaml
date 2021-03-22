@@ -20,7 +20,11 @@
         state: present
 
     - name: Update apt and install docker-ce
-      apt: update_cache=yes name=docker-ce state=latest
+      apt: 
+        name: "docker-ce=5:19.03.0~3-0~ubuntu-bionic"
+        update_cache: "yes" 
+        state: "present"
+
 
     - name: set user vagrant
       shell: |
@@ -35,9 +39,12 @@
         line: "{{ item }}"
       with_items:
         - 192.168.99.100 master.labk8s.corp.br
-        - 192.168.99.101 node1.labk8s.corp.br
-        - 192.168.99.102 node2.labk8s.corp.br
-    
+        - 192.168.99.101 master1.labk8s.corp.br
+        - 192.168.99.102 master2.labk8s.corp.br
+        - 192.168.99.103 node.labk8s.corp.br
+        - 192.168.99.104 node1.labk8s.corp.br
+        - 192.168.99.105 node2.labk8s.corp.br
+        - 192.168.99.106 haproxy.labk8s.corp.br
     - name: Instalando pacotes de dependencias
       apt:
         name: "{{ packages }}"
@@ -55,6 +62,8 @@
         - python-netaddr
         - snap
         - snapd
+        - net-tools
+
         update_cache: yes
         
     - name: Criando o arquivo get-pip.py
