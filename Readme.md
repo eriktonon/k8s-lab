@@ -16,8 +16,9 @@
   $ chmod +x startLab.sh
   $ bash startLab.sh
   $ vagrant ssh master 
+  ## use sudo or sudo su to perform the commands below
   $ kubeadm token create --print-join-command
   ## copy the return and paste in the nodes
-  $ vagrant ssh node1 paste  kubeadm join \ <control-plane-host>:<control-plane-port> \ --token <token> \ --discovery-token-ca-cert-hash sha256:<hash>
+  $ vagrant ssh node1 paste kubeadm join \ <control-plane-host>:<control-plane-port> \ --token <token> \ --discovery-token-ca-cert-hash sha256:<hash>
   $ vagrant ssh node2 paste kubeadm join \ <control-plane-host>:<control-plane-port> \ --token <token> \ --discovery-token-ca-cert-hash sha256:<hash>
   ```
