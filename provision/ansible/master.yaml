@@ -71,3 +71,22 @@
     - name: Atualiza o timezone
       shell: timedatectl set-timezone America/Sao_Paulo
       args:
+    
+    - name: Criando o arquivo de configuracao kubernets
+      copy:
+        src: files/prepareCluster.sh
+        dest: /tmp
+        mode: 0644
+    - name: instala kubernets dependencias
+      shell: sh prepareCluster.sh
+      args:
+        chdir: /tmp
+    - name: Criando o arquivo de configuracao kubernets adm
+      copy:
+        src: files/prepareMaster.sh
+        dest: /tmp
+        mode: 0644
+    - name: iniciando kube adm
+      shell: sh prepareMaster.sh
+      args:
+        chdir: /tmp

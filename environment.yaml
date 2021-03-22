@@ -13,7 +13,7 @@
   ipaddress: 192.168.99.101
   memory: 2048
   cpus: 2
-  provision: provision/ansible/node2.yaml
+  provision: provision/ansible/nodes.yaml
 
 - name: node2
   box: trombik/ansible-ubuntu-18.04-amd64
@@ -21,4 +21,4 @@
   ipaddress: 192.168.99.102
   memory: 2048
   cpus: 2
-  provision: provision/ansible/node1.yaml
+  provision: provision/ansible/nodes.yaml
