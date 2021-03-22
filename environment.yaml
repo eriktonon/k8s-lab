@@ -1,24 +1,48 @@
 ---
-- name: master
+- name: bmaster
   box: trombik/ansible-ubuntu-18.04-amd64
   hostname: master.k8s.corp.br
-  ipaddress: 192.168.99.100
+  ipaddress: 172.10.10.100
   memory: 2048
   cpus: 2
   provision: provision/ansible/master.yaml
 
-- name: node1
+- name: bmaster1
+  box: trombik/ansible-ubuntu-18.04-amd64
+  hostname: master1.k8s.corp.br
+  ipaddress: 172.10.10.101
+  memory: 2048
+  cpus: 2
+  provision: provision/ansible/master.yaml
+
+- name: bmaster2
+  box: trombik/ansible-ubuntu-18.04-amd64
+  hostname: master2.k8s.corp.br
+  ipaddress: 172.10.10.102
+  memory: 2048
+  cpus: 2
+  provision: provision/ansible/master.yaml
+
+- name: bnode1
   box: trombik/ansible-ubuntu-18.04-amd64
   hostname: node1.k8s.corp.br
-  ipaddress: 192.168.99.101
+  ipaddress: 172.10.10.103
   memory: 2048
   cpus: 2
-  provision: provision/ansible/node2.yaml
+  provision: provision/ansible/nodes.yaml
 
-- name: node2
+- name: bnode2
   box: trombik/ansible-ubuntu-18.04-amd64
   hostname: node2.k8s.corp.br
-  ipaddress: 192.168.99.102
+  ipaddress: 172.10.10.104
   memory: 2048
   cpus: 2
-  provision: provision/ansible/node1.yaml
+  provision: provision/ansible/nodes.yaml
+
+- name: bnode3
+  box: trombik/ansible-ubuntu-18.04-amd64
+  hostname: node3.k8s.corp.br
+  ipaddress: 172.10.10.105
+  memory: 2048
+  cpus: 2
+  provision: provision/ansible/nodes.yaml

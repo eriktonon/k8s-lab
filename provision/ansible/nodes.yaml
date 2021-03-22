@@ -34,10 +34,13 @@
         path: /etc/hosts
         line: "{{ item }}"
       with_items:
-        - 192.168.99.100 master.labk8s.corp.br
-        - 192.168.99.101 node1.labk8s.corp.br
-        - 192.168.99.102 node2.labk8s.corp.br
-    
+        - 172.10.10.100 master.labk8s.corp.br
+        - 172.10.10.101 master2.labk8s.corp.br
+        - 172.10.10.102 master3.labk8s.corp.br
+        - 172.10.10.103 node1.labk8s.corp.br
+        - 172.10.10.104 node2.labk8s.corp.br
+        - 172.10.10.105 node3.labk8s.corp.br
+
     - name: Instalando pacotes de dependencias
       apt:
         name: "{{ packages }}"
@@ -71,3 +74,13 @@
     - name: Atualiza o timezone
       shell: timedatectl set-timezone America/Sao_Paulo
       args:
+
+    - name: Criando o arquivo prepare.sh
+      copy:
+        src: files/prepareCluster.sh
+        dest: /tmp
+        mode: 0644
+    - name: instala kubernets dependencias
+      shell: sh prepareCluster.sh
+      args:
+        chdir: /tmp

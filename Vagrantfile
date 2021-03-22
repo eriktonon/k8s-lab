@@ -2,7 +2,6 @@
 # vi: set ft=ruby :
 # Variaveis
 VAGRANTFILE_API_VERSION = 2
-
 # Chamando modulo YAML
 require 'yaml'
 
