@@ -40,3 +40,7 @@ sudo swapoff -a
 sudo systemctl enable kubelet 
 
 sudo systemctl start kubelet 
+
+sudo echo "source <(kubectl completion bash)" >> /root/.bashrc
+
+sudo apt install bash-completion
