@@ -14,8 +14,9 @@ fi
 echo "[INFO] Provisioning multi-node Kubernetes cluster via Vagrant + Ansible..."
 vagrant up
 
-echo "[INFO] Cluster bootstrap complete. Exporting KUBECONFIG=$(pwd)/.cluster/config"
+echo "[INFO] Cluster bootstrap complete."
 if [[ -f ".cluster/config" ]]; then
-  export KUBECONFIG="$(pwd)/.cluster/config"
+  KUBECONFIG_ABS="$(pwd)/.cluster/config"
+  export KUBECONFIG="${KUBECONFIG_ABS}"
   ./scripts/verify-cluster.sh
 fi

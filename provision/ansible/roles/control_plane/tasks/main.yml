@@ -23,8 +23,12 @@
     group: "{{ item.group }}"
     mode: "0750"
   loop:
-    - { path: "/root/.kube", owner: "root", group: "root" }
-    - { path: "/home/vagrant/.kube", owner: "vagrant", group: "vagrant" }
+    - path: "/root/.kube"
+      owner: "root"
+      group: "root"
+    - path: "/home/vagrant/.kube"
+      owner: "vagrant"
+      group: "vagrant"
 
 - name: Copy admin.conf to root and vagrant user kubeconfig
   ansible.builtin.copy:
@@ -35,8 +39,12 @@
     group: "{{ item.group }}"
     mode: "0600"
   loop:
-    - { dest: "/root/.kube/config", owner: "root", group: "root" }
-    - { dest: "/home/vagrant/.kube/config", owner: "vagrant", group: "vagrant" }
+    - dest: "/root/.kube/config"
+      owner: "root"
+      group: "root"
+    - dest: "/home/vagrant/.kube/config"
+      owner: "vagrant"
+      group: "vagrant"
 
 - name: Ensure shared /vagrant/.cluster artifact directory exists
   ansible.builtin.file:
