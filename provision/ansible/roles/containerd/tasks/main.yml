@@ -1,0 +1,82 @@
+---
+- name: Ensure /etc/apt/keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download official Docker GPG apt keyring for containerd.io
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Configure Docker apt repository for containerd runtime
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}
+      signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    filename: docker
+    state: present
+
+- name: Install containerd.io package
+  ansible.builtin.apt:
+    name: containerd.io
+    state: present
+    update_cache: true
+
+- name: Ensure /etc/containerd directory exists
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    mode: "0755"
+
+- name: Check if containerd config.toml already has SystemdCgroup enabled
+  ansible.builtin.command: grep -q "SystemdCgroup = true" /etc/containerd/config.toml
+  register: containerd_systemd_check
+  failed_when: false
+  changed_when: false
+
+- name: Generate default containerd configuration when SystemdCgroup is not yet configured
+  ansible.builtin.shell: |
+    set -euo pipefail
+    containerd config default > /etc/containerd/config.toml
+  args:
+    executable: /bin/bash
+  when: containerd_systemd_check.rc != 0
+  changed_when: true
+
+- name: Enable SystemdCgroup driver in /etc/containerd/config.toml
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    replace: 'SystemdCgroup = true'
+  notify: Restart containerd
+
+- name: Configure sandbox_image to match Kubernetes pause container registry
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'sandbox_image = "registry\.k8s\.io/pause:.*"'
+    replace: 'sandbox_image = "registry.k8s.io/pause:3.10"'
+  notify: Restart containerd
+
+- name: Configure crictl to use containerd CRI socket by default
+  ansible.builtin.copy:
+    dest: /etc/crictl.yaml
+    mode: "0644"
+    content: |
+      runtime-endpoint: unix:///run/containerd/containerd.sock
+      image-endpoint: unix:///run/containerd/containerd.sock
+      timeout: 10
+      debug: false
+      pull-image-on-create: false
+
+- name: Ensure containerd service is enabled and running
+  ansible.builtin.service:
+    name: containerd
+    state: started
+    enabled: true
+
+- name: Flush handlers to ensure containerd is restarted before kubeadm runs
+  ansible.builtin.meta: flush_handlers

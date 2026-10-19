@@ -1,0 +1,70 @@
+---
+- name: Ensure /etc/apt/keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download official Kubernetes Release GPG Key from pkgs.k8s.io
+  ansible.builtin.get_url:
+    url: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version_minor }}/deb/Release.key"
+    dest: /etc/apt/keyrings/kubernetes-release.asc
+    mode: "0644"
+
+- name: Dearmor Kubernetes GPG Keyring for apt signed-by verification
+  ansible.builtin.command:
+    cmd: gpg --dearmor --yes -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /etc/apt/keyrings/kubernetes-release.asc
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+- name: Add official Kubernetes pkgs.k8s.io apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg]
+      https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version_minor }}/deb/ /
+    filename: kubernetes
+    state: present
+
+- name: Install kubelet, kubeadm, and kubectl packages
+  ansible.builtin.apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    update_cache: true
+
+- name: Hold kubelet, kubeadm, and kubectl versions to prevent unintended upgrades
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+- name: Configure kubelet node-ip for multi-NIC Vagrant topology
+  ansible.builtin.copy:
+    dest: /etc/default/kubelet
+    mode: "0644"
+    content: |
+      KUBELET_EXTRA_ARGS=--node-ip={{ node_ip | default(ansible_default_ipv4.address) }}
+  notify: Restart kubelet
+
+- name: Enable kubelet systemd service
+  ansible.builtin.service:
+    name: kubelet
+    enabled: true
+
+- name: Configure kubectl bash completion and aliases for root and vagrant
+  ansible.builtin.blockinfile:
+    path: "{{ item }}"
+    create: true
+    mode: "0644"
+    marker: "# {mark} K8S-LAB CLI ERGONOMICS"
+    block: |
+      source <(kubectl completion bash)
+      alias k=kubectl
+      complete -o default -F __start_kubectl k
+  loop:
+    - /root/.bashrc
+    - /home/vagrant/.bashrc

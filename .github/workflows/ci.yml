@@ -1,0 +1,52 @@
+---
+name: Infrastructure & Ansible Validation CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Vagrantfile, Ansible Roles & Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Vagrantfile Ruby syntax
+        run: ruby -c Vagrantfile
+
+      - name: Set up Python & Ansible
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible & Yamllint
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core yamllint
+
+      - name: Run YAML Linter on Topology, Ansible, and Kubernetes Manifests
+        run: |
+          yamllint -d "{extends: default, rules: {line-length: {max: 160}, truthy: {check-keys: false}}}" \
+            environment.yaml \
+            provision/ansible/ \
+            manifests/platform/
+
+      - name: Verify Ansible Playbook & Role Syntax
+        env:
+          ANSIBLE_CONFIG: provision/ansible/ansible.cfg
+          ANSIBLE_ROLES_PATH: provision/ansible/roles
+        run: |
+          ansible-playbook --syntax-check -i provision/ansible/inventory/hosts.yml provision/ansible/site.yml
+          ansible-playbook --syntax-check -i provision/ansible/inventory/hosts.yml provision/ansible/master.yaml
+          ansible-playbook --syntax-check -i provision/ansible/inventory/hosts.yml provision/ansible/nodes.yaml
+
+      - name: Validate Shell Scripts with ShellCheck
+        run: |
+          shellcheck startLab.sh scripts/verify-cluster.sh

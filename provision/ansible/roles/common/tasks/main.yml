@@ -1,0 +1,71 @@
+---
+- name: Update apt package cache and install essential system packages
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check current system timezone
+  ansible.builtin.command: timedatectl show -p Timezone --value
+  register: current_tz
+  changed_when: false
+
+- name: Configure system timezone
+  ansible.builtin.command: "timedatectl set-timezone {{ system_timezone }}"
+  when: current_tz.stdout != system_timezone
+  changed_when: true
+
+- name: Ensure chrony NTP daemon is enabled and running
+  ansible.builtin.service:
+    name: chrony
+    state: started
+    enabled: true
+
+- name: Disable active swap immediately if enabled
+  ansible.builtin.command: swapoff -a
+  when: ansible_swaptotal_mb | default(0) > 0
+  changed_when: true
+
+- name: Remove swap entries from /etc/fstab permanently
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+.*)$'
+    replace: '# \1'
+
+- name: Configure persistent kernel modules for Kubernetes CRI and IPVS
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k8s.conf
+    mode: "0644"
+    content: |
+      {% for mod in kernel_modules %}
+      {{ mod }}
+      {% endfor %}
+
+- name: Load required kernel modules immediately
+  ansible.builtin.command: "modprobe {{ item }}"
+  loop: "{{ kernel_modules }}"
+  changed_when: false
+
+- name: Write Kubernetes sysctl networking and kernel resiliency parameters
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-kubernetes-cri.conf
+    mode: "0644"
+    content: |
+      {% for key, value in sysctl_settings.items() %}
+      {{ key }} = {{ value }}
+      {% endfor %}
+  register: sysctl_config
+
+- name: Reload sysctl parameters when configuration changes
+  ansible.builtin.command: sysctl --system
+  when: sysctl_config.changed
+  changed_when: true
+
+- name: Populate deterministic /etc/hosts entries across all cluster nodes
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: ".*{{ item.fqdn }}.*"
+    line: "{{ item.ip }} {{ item.fqdn }} {{ item.short }}"
+    state: present
+  loop: "{{ cluster_hosts }}"

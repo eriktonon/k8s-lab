@@ -1,0 +1,101 @@
+---
+- name: Render declarative kubeadm Init & ClusterConfiguration
+  ansible.builtin.template:
+    src: kubeadm-config.yaml.j2
+    dest: /etc/kubernetes/kubeadm-config.yaml
+    mode: "0600"
+
+- name: Pre-pull Kubernetes control-plane images when cluster is not yet initialized
+  ansible.builtin.command:
+    cmd: kubeadm config images pull --config=/etc/kubernetes/kubeadm-config.yaml
+    creates: /etc/kubernetes/admin.conf
+
+- name: Initialize Kubernetes Control Plane with kubeadm
+  ansible.builtin.command:
+    cmd: kubeadm init --config=/etc/kubernetes/kubeadm-config.yaml --upload-certs
+    creates: /etc/kubernetes/admin.conf
+
+- name: Ensure .kube directories exist for root and vagrant users
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "0750"
+  loop:
+    - { path: "/root/.kube", owner: "root", group: "root" }
+    - { path: "/home/vagrant/.kube", owner: "vagrant", group: "vagrant" }
+
+- name: Copy admin.conf to root and vagrant user kubeconfig
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ item.dest }}"
+    remote_src: true
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "0600"
+  loop:
+    - { dest: "/root/.kube/config", owner: "root", group: "root" }
+    - { dest: "/home/vagrant/.kube/config", owner: "vagrant", group: "vagrant" }
+
+- name: Ensure shared /vagrant/.cluster artifact directory exists
+  ansible.builtin.file:
+    path: /vagrant/.cluster
+    state: directory
+    mode: "0755"
+
+- name: Export admin kubeconfig to /vagrant/.cluster/config for host kubectl access
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /vagrant/.cluster/config
+    remote_src: true
+    mode: "0600"
+
+- name: Wait for Kubernetes API Server /readyz endpoint to return HTTP 200
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig=/etc/kubernetes/admin.conf get --raw=/readyz
+  register: api_readyz
+  until: api_readyz.rc == 0
+  retries: 20
+  delay: 5
+  changed_when: false
+
+- name: Deploy Calico CNI Network Plugin ({{ calico_version }})
+  ansible.builtin.command:
+    cmd: >-
+      kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f
+      https://raw.githubusercontent.com/projectcalico/calico/{{ calico_version }}/manifests/calico.yaml
+  when: cni_provider == "calico"
+  register: calico_apply
+  changed_when: "'created' in calico_apply.stdout or 'configured' in calico_apply.stdout"
+
+- name: Deploy Kubernetes Metrics Server ({{ metrics_server_version }})
+  ansible.builtin.command:
+    cmd: >-
+      kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f
+      https://github.com/kubernetes-sigs/metrics-server/releases/download/{{ metrics_server_version }}/components.yaml
+  register: metrics_apply
+  changed_when: "'created' in metrics_apply.stdout or 'configured' in metrics_apply.stdout"
+
+- name: Patch Metrics Server deployment with --kubelet-insecure-tls for local lab PKI
+  ansible.builtin.command:
+    cmd: >-
+      kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system patch deployment metrics-server
+      --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+  when: "'created' in metrics_apply.stdout"
+  changed_when: true
+
+- name: Generate fresh worker join token command
+  ansible.builtin.command:
+    cmd: kubeadm token create --print-join-command
+  register: kubeadm_join_cmd
+  changed_when: false
+
+- name: Persist worker join script to /vagrant/.cluster/join-command.sh for automated node bootstrap
+  ansible.builtin.copy:
+    dest: /vagrant/.cluster/join-command.sh
+    mode: "0750"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      {{ kubeadm_join_cmd.stdout }} --cri-socket unix:///run/containerd/containerd.sock

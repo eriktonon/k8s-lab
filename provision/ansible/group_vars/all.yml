@@ -1,0 +1,70 @@
+---
+# Global Kubernetes & Platform Engineering Variables
+system_timezone: "America/Sao_Paulo"
+cluster_name: "k8s-lab-corp"
+kubernetes_domain: "k8s.corp.br"
+
+# Kubernetes Release Channel (pkgs.k8s.io)
+kubernetes_version_minor: "v1.31"
+kubernetes_version_patch: "1.31.2"
+control_plane_ip: "192.168.99.100"
+control_plane_endpoint: "192.168.99.100:6443"
+
+# Cluster Networking (CNI & Service Subnets)
+pod_network_cidr: "10.244.0.0/16"
+service_cidr: "10.96.0.0/12"
+cni_provider: "calico"
+calico_version: "v3.29.1"
+metrics_server_version: "v0.7.2"
+metallb_version: "v0.14.9"
+metallb_ip_range: "192.168.99.200-192.168.99.250"
+
+# Static Cluster Host Resolution
+cluster_hosts:
+  - ip: "192.168.99.100"
+    fqdn: "master.k8s.corp.br"
+    short: "master"
+  - ip: "192.168.99.101"
+    fqdn: "node1.k8s.corp.br"
+    short: "node1"
+  - ip: "192.168.99.102"
+    fqdn: "node2.k8s.corp.br"
+    short: "node2"
+
+# Kernel Modules Required for Containerd CRI, OverlayFS, and IPVS Kube-Proxy
+kernel_modules:
+  - overlay
+  - br_netfilter
+  - ip_vs
+  - ip_vs_rr
+  - ip_vs_wrr
+  - ip_vs_sh
+  - nf_conntrack
+
+# Kernel Sysctl Parameters for Kubernetes Networking
+sysctl_settings:
+  net.bridge.bridge-nf-call-iptables: 1
+  net.bridge.bridge-nf-call-ip6tables: 1
+  net.ipv4.ip_forward: 1
+  vm.overcommit_memory: 1
+  kernel.panic: 10
+  kernel.panic_on_oops: 1
+
+# Essential OS Packages
+common_packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - software-properties-common
+  - jq
+  - git
+  - vim
+  - htop
+  - bash-completion
+  - socat
+  - conntrack
+  - ipset
+  - ipvsadm
+  - chrony

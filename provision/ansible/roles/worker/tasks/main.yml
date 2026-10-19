@@ -1,0 +1,38 @@
+---
+- name: Wait for control plane join script (/vagrant/.cluster/join-command.sh) to become available
+  ansible.builtin.wait_for:
+    path: /vagrant/.cluster/join-command.sh
+    state: present
+    timeout: 300
+
+- name: Join Worker Node to Kubernetes Cluster via kubeadm
+  ansible.builtin.command:
+    cmd: /bin/bash /vagrant/.cluster/join-command.sh
+    creates: /etc/kubernetes/kubelet.conf
+
+- name: Ensure .kube directory exists for vagrant user on worker node
+  ansible.builtin.file:
+    path: /home/vagrant/.kube
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: "0750"
+
+- name: Copy cluster kubeconfig from shared /vagrant/.cluster/config to worker vagrant user
+  ansible.builtin.copy:
+    src: /vagrant/.cluster/config
+    dest: /home/vagrant/.kube/config
+    remote_src: true
+    owner: vagrant
+    group: vagrant
+    mode: "0600"
+
+- name: Apply worker role label to node in Kubernetes API
+  ansible.builtin.command:
+    cmd: >-
+      kubectl --kubeconfig=/vagrant/.cluster/config label node
+      {{ node_fqdn | default(ansible_fqdn) }}
+      node-role.kubernetes.io/worker=worker --overwrite
+  register: label_worker
+  changed_when: "'labeled' in label_worker.stdout"
+  failed_when: false

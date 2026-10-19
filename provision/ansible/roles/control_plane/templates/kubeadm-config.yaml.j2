@@ -1,0 +1,39 @@
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: "{{ control_plane_ip }}"
+  bindPort: 6443
+nodeRegistration:
+  name: "{{ node_fqdn | default(ansible_fqdn) }}"
+  criSocket: "unix:///run/containerd/containerd.sock"
+  imagePullPolicy: IfNotPresent
+  kubeletExtraArgs:
+    - name: node-ip
+      value: "{{ control_plane_ip }}"
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+clusterName: "{{ cluster_name }}"
+kubernetesVersion: "v{{ kubernetes_version_patch }}"
+controlPlaneEndpoint: "{{ control_plane_endpoint }}"
+networking:
+  dnsDomain: "cluster.local"
+  podSubnet: "{{ pod_network_cidr }}"
+  serviceSubnet: "{{ service_cidr }}"
+apiServer:
+  certSANs:
+    - "{{ control_plane_ip }}"
+    - "master"
+    - "master.k8s.corp.br"
+    - "127.0.0.1"
+    - "localhost"
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+serverTLSBootstrap: true
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+mode: ipvs

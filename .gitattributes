@@ -1,0 +1,10 @@
+# Enforce Unix LF line endings across all files so Vagrant shared folders (/vagrant)
+# execute shell scripts and Ansible playbooks cleanly even when cloned on Windows hosts.
+* text=auto eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.j2 text eol=lf
+*.cfg text eol=lf
+Vagrantfile text eol=lf
+Makefile text eol=lf

@@ -1,0 +1,25 @@
+---
+# MetalLB Layer-2 LoadBalancer Pool Configuration
+# Apply after installing MetalLB controller:
+# kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: lab-private-vip-pool
+  namespace: metallb-system
+  labels:
+    app.kubernetes.io/part-of: k8s-lab-platform
+spec:
+  addresses:
+    - 192.168.99.200-192.168.99.250
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: lab-l2-advertisement
+  namespace: metallb-system
+  labels:
+    app.kubernetes.io/part-of: k8s-lab-platform
+spec:
+  ipAddressPools:
+    - lab-private-vip-pool

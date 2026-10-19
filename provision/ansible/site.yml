@@ -1,0 +1,23 @@
+---
+- name: Prepare All Cluster Nodes (OS Hardening, Containerd CRI, Kubernetes Packages)
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - role: common
+    - role: containerd
+    - role: kubernetes
+
+- name: Initialize Kubernetes Control Plane & CNI Networking
+  hosts: control_plane
+  become: true
+  gather_facts: true
+  roles:
+    - role: control_plane
+
+- name: Join Worker Nodes to Kubernetes Cluster
+  hosts: workers
+  become: true
+  gather_facts: true
+  roles:
+    - role: worker
